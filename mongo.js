@@ -2,7 +2,7 @@
 const mongoose = require('mongoose');
 
 // Sử dụng biến môi trường để lưu trữ URL kết nối
-const dbURL = process.env.MONGODB_URL || 'mongodb+srv://nguyenthilananhit:Nguyenthilananh!2345@cluster0.9gdnlpv.mongodb.net/suggestfilm';
+const dbURL = process.env.MONGODB_URI || 'mongodb+srv://nguyenthilananhit:Nguyenthilananh!2345@cluster0.9gdnlpv.mongodb.net/suggestfilm';
 
 // Tạo schema cho reviews (nếu chưa có)
 const reviewSchema = new mongoose.Schema({
