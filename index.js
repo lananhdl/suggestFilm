@@ -2,6 +2,7 @@ const express = require('express');
 const app = express();
 const path = require('path');
 const movieRoutes = require('./routes/movieRoutes');
+require('dotenv').config();
 
 // Middleware quan trọng
 app.use(express.json()); // Parse JSON body (chỉ cần một lần)
@@ -9,6 +10,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Middleware ghi log để debug tất cả request
 app.use((req, res, next) => {
+  console.log(process.env.SYSTEM_NAME);
   console.log('Incoming request:', req.method, req.url);
   next();
 });

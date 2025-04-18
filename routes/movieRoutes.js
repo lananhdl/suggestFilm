@@ -7,12 +7,155 @@ const connectMongo = require('../mongo');
 const connectRedis = require('../redis');
 let redisClient;
 
+  // Kiểm tra nếu foreign key đã tồn tại trước khi thêm
+async function checkForeignKeyExists(tableName, constraintName) {
+  const [rows] = await db.execute(`
+    SELECT CONSTRAINT_NAME
+    FROM information_schema.KEY_COLUMN_USAGE
+    WHERE TABLE_NAME = ? AND CONSTRAINT_NAME = ?;
+  `, [tableName, constraintName]);
+  return rows.length > 0;
+}
+
 // 1. GET tất cả phim
+router.get('/migrate-table', async (req, res) => {
+  const createTableDirectorsQuery = `
+  CREATE TABLE IF NOT EXISTS \`Directors\` (  
+    \`director_id\` int NOT NULL AUTO_INCREMENT,  
+    \`name\` varchar(255) NOT NULL,  
+    \`birthdate\` date,  
+    \`nationality\` varchar(100),  
+    PRIMARY KEY (\`director_id\`)  
+  ) ENGINE=InnoDB  
+    DEFAULT CHARSET=utf8mb4  
+    COLLATE=utf8mb4_0900_ai_ci;
+`;
+
+  const createTableFavoritesQuery = `
+  CREATE TABLE IF NOT EXISTS Favorites (
+        favorite_id INT NOT NULL AUTO_INCREMENT,
+        user_id INT NOT NULL,
+        movie_id INT NOT NULL,
+        PRIMARY KEY (favorite_id)
+      ) ENGINE=InnoDB
+      DEFAULT CHARSET=utf8mb4
+      COLLATE=utf8mb4_0900_ai_ci;
+  `;
+  const createTableGenresQuery = `
+  CREATE TABLE IF NOT EXISTS Genres (
+      genre_id INT NOT NULL AUTO_INCREMENT,
+      name VARCHAR(255) NOT NULL,
+      PRIMARY KEY (genre_id)
+    ) ENGINE=InnoDB
+    DEFAULT CHARSET=utf8mb4
+    COLLATE=utf8mb4_0900_ai_ci;
+  `;
+  const createTableMoviesQuery = `
+    CREATE TABLE IF NOT EXISTS Movies (
+      movie_id INT NOT NULL AUTO_INCREMENT,
+      title VARCHAR(255) NOT NULL,
+      genre_id INT,
+      director_id INT,
+      release_date DATE,
+      popularity FLOAT,
+      PRIMARY KEY (movie_id)
+    ) ENGINE=InnoDB
+    DEFAULT CHARSET=utf8mb4
+    COLLATE=utf8mb4_0900_ai_ci;
+  `;
+
+  const createTableUsersQuery = `
+    CREATE TABLE IF NOT EXISTS Users (
+      user_id INT NOT NULL AUTO_INCREMENT,
+      username VARCHAR(255) NOT NULL,
+      email VARCHAR(255) NOT NULL,
+      password VARCHAR(255) NOT NULL,
+      PRIMARY KEY (user_id)
+    ) ENGINE=InnoDB
+    DEFAULT CHARSET=utf8mb4
+    COLLATE=utf8mb4_0900_ai_ci;
+  `;
+
+  try {
+    
+    await db.execute(createTableDirectorsQuery);
+    await db.execute(createTableFavoritesQuery);
+    await db.execute(createTableGenresQuery);
+    await db.execute(createTableMoviesQuery);
+    await db.execute(createTableUsersQuery);
+
+      // Thêm foreign key cho Movies - Genre
+  const fkMoviesGenresExists = await checkForeignKeyExists('Movies', 'fk_movies_genres');
+  if (!fkMoviesGenresExists) {
+    await db.execute(`
+      ALTER TABLE Movies
+      ADD CONSTRAINT fk_movies_genres
+      FOREIGN KEY (genre_id) REFERENCES Genres(genre_id)
+      ON DELETE SET NULL;
+    `);
+    console.log('✅ Foreign key fk_movies_genres added.');
+  } else {
+    console.log('⚠️ Foreign key fk_movies_genres already exists.');
+  }
+
+  // Thêm foreign key cho Movies - Director
+  const fkMoviesDirectorsExists = await checkForeignKeyExists('Movies', 'fk_movies_directors');
+  if (!fkMoviesDirectorsExists) {
+    await db.execute(`
+      ALTER TABLE Movies
+      ADD CONSTRAINT fk_movies_directors
+      FOREIGN KEY (director_id) REFERENCES Directors(director_id)
+      ON DELETE SET NULL;
+    `);
+    console.log('✅ Foreign key fk_movies_directors added.');
+  } else {
+    console.log('⚠️ Foreign key fk_movies_directors already exists.');
+  }
+
+  // Thêm foreign key cho Favorites - User
+  const fkFavoritesUsersExists = await checkForeignKeyExists('Favorites', 'fk_favorites_users');
+  if (!fkFavoritesUsersExists) {
+    await db.execute(`
+      ALTER TABLE Favorites
+      ADD CONSTRAINT fk_favorites_users
+      FOREIGN KEY (user_id) REFERENCES Users(user_id)
+      ON DELETE CASCADE;
+    `);
+    console.log('✅ Foreign key fk_favorites_users added.');
+  } else {
+    console.log('⚠️ Foreign key fk_favorites_users already exists.');
+  }
+
+  // Thêm foreign key cho Favorites - Movie
+  const fkFavoritesMoviesExists = await checkForeignKeyExists('Favorites', 'fk_favorites_movies');
+  if (!fkFavoritesMoviesExists) {
+    await db.execute(`
+      ALTER TABLE Favorites
+      ADD CONSTRAINT fk_favorites_movies
+      FOREIGN KEY (movie_id) REFERENCES Movies(movie_id)
+      ON DELETE CASCADE;
+    `);
+    console.log('✅ Foreign key fk_favorites_movies added.');
+  } else {
+    console.log('⚠️ Foreign key fk_favorites_movies already exists.');
+  }
+
+    
+    res.json({ message: 'Table created successfully' });
+  } catch (error) {
+    console.error('Error created tables:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.get('/', async (req, res) => {
   try {
+    console.log('Fetching all movies...');
+    
     const [movies] = await db.query('SELECT * FROM Movies');
     res.json(movies);
   } catch (error) {
+    console.error('Error fetching movies:', error);
     res.status(500).json({ error: error.message });
   }
 });

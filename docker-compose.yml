@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - MONGO_HOST=${MONGO_HOST}
+      - MONGO_PORT=${MONGO_PORT}
+      - NEO4J_HOST=${NEO4J_HOST}
+      - NEO4J_PORT=${NEO4J_PORT}
+    depends_on:
+      - mysql
+
+      - redis
+      # - mongo
+      # - neo4j
+    networks:
+      - appnet
+
+  mysql:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - appnet
+
+  redis:
+    image: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - appnet
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    networks:
+      - appnet
+
+  # mongo:
+  #   image: mongo
+  #   ports:
+  #     - "27017:27017"
+  #   environment:
+  #     - MONGO_INITDB_ROOT_USERNAME=admin  # Tên người dùng admin
+  #     - MONGO_INITDB_ROOT_PASSWORD=password  # Mật khẩu cho admin
+  #   volumes:
+  #     - mongo-data:/data/db  # Dữ liệu MongoDB sẽ được lưu trên volume
+  #   networks:
+  #     - appnet
+
+  # neo4j:
+  #   image: neo4j
+  #   ports:
+  #     - "7474:7474"
+  #     - "7687:7687"
+  #   environment:
+  #     - NEO4J_AUTH=${NEO4J_AUTH}
+  #   networks:
+  #     - appnet
+
+volumes:
+  mysql_data:
+
+networks:
+  appnet:
+    driver: bridge

@@ -7,12 +7,14 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "seed": "node utils/seed.js"
+    "seed": "node utils/seed.js",
+    "migrate-mysql": "node utils/migrate_mysql.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "mongoose": "^8.13.2",
     "mysql2": "^3.14.0",
